@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personnalisé pour le pied de page
+# CSS personnalisé pour le pied de page et centrage
 st.markdown("""
     <style>
     .footer {
@@ -35,13 +35,16 @@ st.markdown("""
     .main {
         margin-bottom: 60px;
     }
+    h1, h2, h3 {
+        text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # En-tête principal
 st.title("⛏️ Zipf Mineral Discovery Application")
-st.markdown("### Analyse statistique avancée avec test de Kolmogorov-Smirnov et prédictions des gisements non découverts dans une province aurifère")
-st.markdown("**Auteurs:** Didier Ouedraogo, PGeo | Koulou Danshoko, Geo")
+st.markdown("### Test de Kolmogorov-Smirnov et prédictions des gisements non découverts dans une province aurifère")
+st.markdown("<p style='text-align: center;'><strong>Auteurs: Didier Ouedraogo, PGeo | Koulou Danshoko, Geo</strong></p>", unsafe_allow_html=True)
 st.divider()
 
 # Sidebar pour les paramètres
@@ -190,7 +193,7 @@ ax1.set_xscale('log')
 ax1.set_yscale('log')
 ax1.set_xlabel('Rang (échelle log)', fontsize=12)
 ax1.set_ylabel('Tonnage Mt (échelle log)', fontsize=12)
-ax1.set_title('Loi de Zipf - Distribution des tonnages', fontsize=14, fontweight='bold')
+ax1.set_title('Loi de Zipf - Distribution des tonnages', fontsize=14, fontweight='bold', loc='center')
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 st.pyplot(fig1)
@@ -229,7 +232,7 @@ with col2:
     ax2.plot(x, stats.norm.pdf(x), 'r-', linewidth=2, label='Distribution normale')
     ax2.set_xlabel('Résidus standardisés', fontsize=12)
     ax2.set_ylabel('Densité', fontsize=12)
-    ax2.set_title('Distribution des résidus vs. Normale', fontsize=14, fontweight='bold')
+    ax2.set_title('Distribution des résidus vs. Normale', fontsize=14, fontweight='bold', loc='center')
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     st.pyplot(fig2)
@@ -239,7 +242,7 @@ with col2:
 st.subheader("📊 Q-Q Plot (Quantile-Quantile)")
 fig3, ax3 = plt.subplots(figsize=(8, 6))
 stats.probplot(residuals_standardized, dist="norm", plot=ax3)
-ax3.set_title('Q-Q Plot - Vérification de la normalité', fontsize=14, fontweight='bold')
+ax3.set_title('Q-Q Plot - Vérification de la normalité', fontsize=14, fontweight='bold', loc='center')
 ax3.grid(True, alpha=0.3)
 st.pyplot(fig3)
 plt.close()
@@ -305,7 +308,11 @@ fig4.add_trace(go.Scatter(
 fig4.update_xaxes(type="log", title="Rang (échelle log)")
 fig4.update_yaxes(type="log", title="Tonnage Mt (échelle log)")
 fig4.update_layout(
-    title="Distribution complète: Observés + Prédictions",
+    title={
+        'text': "Distribution complète: Observés + Prédictions",
+        'x': 0.5,
+        'xanchor': 'center'
+    },
     height=500,
     hovermode='closest'
 )
@@ -343,14 +350,14 @@ ax5a.plot(df_sensitivity['Facteur (%)'], df_sensitivity['Gisements non découver
           marker='o', linewidth=2, color='steelblue')
 ax5a.set_xlabel('Facteur d\'extrapolation (%)', fontsize=12)
 ax5a.set_ylabel('Nombre de gisements non découverts', fontsize=12)
-ax5a.set_title('Impact sur le nombre de gisements', fontsize=14, fontweight='bold')
+ax5a.set_title('Impact sur le nombre de gisements', fontsize=14, fontweight='bold', loc='center')
 ax5a.grid(True, alpha=0.3)
 
 ax5b.plot(df_sensitivity['Facteur (%)'], df_sensitivity['Tonnage prédit (Mt)'], 
           marker='s', linewidth=2, color='coral')
 ax5b.set_xlabel('Facteur d\'extrapolation (%)', fontsize=12)
 ax5b.set_ylabel('Tonnage total prédit (Mt)', fontsize=12)
-ax5b.set_title('Impact sur le tonnage total', fontsize=14, fontweight='bold')
+ax5b.set_title('Impact sur le tonnage total', fontsize=14, fontweight='bold', loc='center')
 ax5b.grid(True, alpha=0.3)
 
 plt.tight_layout()
@@ -458,6 +465,6 @@ with st.expander("📖 Documentation et Méthodologie"):
 # Pied de page
 st.markdown("""
     <div class="footer">
-        <p><strong>Développé par Didier Ouedraogo, P.Geo</strong></p>
+        <p><strong>Développé par Didier Ouedraogo, P.Geo | Koulou Danshoko, Geo</strong></p>
     </div>
     """, unsafe_allow_html=True)
