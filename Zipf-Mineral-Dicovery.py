@@ -11,7 +11,7 @@ import base64
 
 # Configuration de la page
 st.set_page_config(
-    page_title="Analyse Loi de Zipf - Gisements d'Or",
+    page_title="Zipf Law - Gold Deposit Discovery",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -83,9 +83,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Titre et en-tête
-st.title("📊 Analyse Loi de Zipf - Gisements d'Or")
+st.title("📊 Zipf Law - Gold Deposit Discovery")
 st.markdown("""
-    ### Analyse statistique avancée avec test de Kolmogorov-Smirnov et prédictions
+    ### Test de Kolmogorov-Smirnov et prédictions de Gisements non découverts
     **Auteurs:** Didier Ouedraogo, PGeo | Koulou Danshoko, Geo
 """)
 
@@ -932,6 +932,6 @@ st.divider()
 st.markdown("""
     <div style='text-align: center; color: #666; padding: 20px;'>
         <p><strong>Analyse Loi de Zipf - Gisements d'Or</strong></p>
-        <p>Développé avec ❤️ par Didier Ouedraogo & Koulou Danshoko</p>
+        <p>Développé par Didier Ouedraogo & Koulou Danshoko</p>
     </div>
 """, unsafe_allow_html=True)
