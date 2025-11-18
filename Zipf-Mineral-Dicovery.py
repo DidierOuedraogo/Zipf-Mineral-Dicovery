@@ -514,17 +514,9 @@ def plotly_to_png_matplotlib(fig, province, filename_base):
                 linestyle = '--' if 'dash' in str(trace.line.dash) else '-'
                 plt.plot(trace.x, trace.y, label=trace.name, linewidth=2, linestyle=linestyle)
         elif trace.type == 'bar':
-            # Gérer les couleurs de manière sûre
-            if hasattr(trace, 'marker') and hasattr(trace.marker, 'color'):
-                colors = trace.marker.color
-                # Si c'est une liste de couleurs
-                if isinstance(colors, (list, tuple, np.ndarray)):
-                    plt.bar(range(len(trace.y)), trace.y, color=colors)
-                else:
-                    # Si c'est une couleur unique ou None
-                    plt.bar(range(len(trace.y)), trace.y, color=colors if colors else 'steelblue')
-            else:
-                plt.bar(range(len(trace.y)), trace.y, color='steelblue')
+            # Pour les graphiques en barres, utiliser une couleur unie
+            # au lieu de l'échelle de couleurs de plotly
+            plt.bar(range(len(trace.y)), trace.y, color='steelblue', alpha=0.7)
             
             if hasattr(trace, 'x') and trace.x is not None:
                 plt.xticks(range(len(trace.x)), trace.x, rotation=45, ha='right')
@@ -545,7 +537,11 @@ def plotly_to_png_matplotlib(fig, province, filename_base):
         plt.yscale('log')
     
     plt.grid(True, alpha=0.3)
-    plt.legend()
+    
+    # Ajouter la légende seulement s'il y a des éléments scatter
+    if any(trace.type == 'scatter' for trace in fig.data):
+        plt.legend()
+    
     plt.tight_layout()
     
     # Sauvegarder en PNG et JPG
@@ -936,6 +932,6 @@ st.divider()
 st.markdown("""
     <div style='text-align: center; color: #666; padding: 20px;'>
         <p><strong>Analyse Loi de Zipf - Gisements d'Or</strong></p>
-        <p>Développé avec ❤️ par Didier Ouedraogo & Koulou Danshoko</p>
+        <p>Développé par Didier Ouedraogo
     </div>
 """, unsafe_allow_html=True)
