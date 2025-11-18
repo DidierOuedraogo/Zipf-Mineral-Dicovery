@@ -500,7 +500,54 @@ def create_reranked_histogram(combined_df, province, show_grid=True):
     
     return fig
 
-# Fonctions d'export
+# Fonctions d'export SANS kaleido (utilisation de matplotlib à la place)
+def plotly_to_png_matplotlib(fig, province, filename_base):
+    """Convertit une figure Plotly en PNG via matplotlib"""
+    # Créer une figure matplotlib
+    plt.figure(figsize=(12, 8), dpi=150)
+    
+    # Extraire les données de la figure plotly
+    for trace in fig.data:
+        if trace.type == 'scatter':
+            if trace.mode == 'markers':
+                plt.scatter(trace.x, trace.y, label=trace.name, s=100, alpha=0.7)
+            elif trace.mode == 'lines' or 'lines' in trace.mode:
+                plt.plot(trace.x, trace.y, label=trace.name, linewidth=2, linestyle='--' if 'dash' in str(trace.line.dash) else '-')
+        elif trace.type == 'bar':
+            plt.bar(range(len(trace.y)), trace.y, color=trace.marker.color if hasattr(trace.marker, 'color') else 'blue')
+            plt.xticks(range(len(trace.x)), trace.x, rotation=45, ha='right')
+    
+    # Récupérer le titre et les labels
+    title = fig.layout.title.text if fig.layout.title else f'{filename_base} - {province}'
+    xaxis_title = fig.layout.xaxis.title.text if fig.layout.xaxis.title else 'X'
+    yaxis_title = fig.layout.yaxis.title.text if fig.layout.yaxis.title else 'Y'
+    
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.xlabel(xaxis_title, fontsize=12)
+    plt.ylabel(yaxis_title, fontsize=12)
+    
+    # Échelle log si nécessaire
+    if fig.layout.xaxis.type == 'log':
+        plt.xscale('log')
+    if fig.layout.yaxis.type == 'log':
+        plt.yscale('log')
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Sauvegarder en PNG et JPG
+    buf_png = BytesIO()
+    buf_jpg = BytesIO()
+    plt.savefig(buf_png, format='png', dpi=150, bbox_inches='tight')
+    plt.savefig(buf_jpg, format='jpg', dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    buf_png.seek(0)
+    buf_jpg.seek(0)
+    
+    return buf_png.getvalue(), buf_jpg.getvalue()
+
 def df_to_excel(dataframes_dict, province):
     """Convertit plusieurs DataFrames en fichier Excel"""
     output = BytesIO()
@@ -512,11 +559,6 @@ def df_to_excel(dataframes_dict, province):
             df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=2)
     output.seek(0)
     return output
-
-def fig_to_image(fig, format='png'):
-    """Convertit une figure Plotly en image PNG/JPG"""
-    img_bytes = fig.to_image(format=format, width=1200, height=800, scale=2)
-    return img_bytes
 
 # Analyse des données
 if data_input:
@@ -612,7 +654,7 @@ if data_input:
                 )
             
             with col2:
-                zipf_png = fig_to_image(zipf_fig, 'png')
+                zipf_png, zipf_jpg = plotly_to_png_matplotlib(zipf_fig, province_name, "Zipf")
                 st.download_button(
                     label="📥 PNG",
                     data=zipf_png,
@@ -621,7 +663,6 @@ if data_input:
                 )
             
             with col3:
-                zipf_jpg = fig_to_image(zipf_fig, 'jpg')
                 st.download_button(
                     label="📥 JPG",
                     data=zipf_jpg,
@@ -646,7 +687,7 @@ if data_input:
                 )
             
             with col2:
-                dist_png = fig_to_image(dist_fig, 'png')
+                dist_png, dist_jpg = plotly_to_png_matplotlib(dist_fig, province_name, "Distribution")
                 st.download_button(
                     label="📥 PNG",
                     data=dist_png,
@@ -655,7 +696,6 @@ if data_input:
                 )
             
             with col3:
-                dist_jpg = fig_to_image(dist_fig, 'jpg')
                 st.download_button(
                     label="📥 JPG",
                     data=dist_jpg,
@@ -729,7 +769,7 @@ if data_input:
                     )
                 
                 with col2:
-                    combined_png = fig_to_image(combined_fig, 'png')
+                    combined_png, combined_jpg = plotly_to_png_matplotlib(combined_fig, province_name, "Reclassee_LogLog")
                     st.download_button(
                         label="📥 PNG",
                         data=combined_png,
@@ -738,7 +778,6 @@ if data_input:
                     )
                 
                 with col3:
-                    combined_jpg = fig_to_image(combined_fig, 'jpg')
                     st.download_button(
                         label="📥 JPG",
                         data=combined_jpg,
@@ -762,7 +801,7 @@ if data_input:
                     )
                 
                 with col2:
-                    hist_png = fig_to_image(hist_fig, 'png')
+                    hist_png, hist_jpg = plotly_to_png_matplotlib(hist_fig, province_name, "Reclassee_Histogramme")
                     st.download_button(
                         label="📥 PNG",
                         data=hist_png,
@@ -771,7 +810,6 @@ if data_input:
                     )
                 
                 with col3:
-                    hist_jpg = fig_to_image(hist_fig, 'jpg')
                     st.download_button(
                         label="📥 JPG",
                         data=hist_jpg,
@@ -886,6 +924,6 @@ st.divider()
 st.markdown("""
     <div style='text-align: center; color: #666; padding: 20px;'>
         <p><strong>Analyse Loi de Zipf - Gisements d'Or</strong></p>
-        <p>Développé par Didier Ouedraogo & Koulou Danshoko</p>
+        <p>Développé avec ❤️ par Didier Ouedraogo & Koulou Danshoko</p>
     </div>
 """, unsafe_allow_html=True)
