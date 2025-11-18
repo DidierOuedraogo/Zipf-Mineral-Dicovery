@@ -73,23 +73,11 @@ st.markdown("""
         border: 2px solid #667eea;
         margin: 10px 0;
     }
-    .existing-badge {
-        background-color: #48bb78;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.75em;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-    .predicted-badge {
-        background-color: #ed8936;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.75em;
-        font-weight: bold;
-        text-transform: uppercase;
+    .province-input {
+        background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -105,6 +93,17 @@ st.markdown("""
 with st.sidebar:
     st.header("⚙️ Paramètres")
     
+    # Nom de la province aurifère
+    st.markdown('<div class="province-input">', unsafe_allow_html=True)
+    province_name = st.text_input(
+        "🏔️ Nom de la Province Aurifère",
+        value="Province Aurifère de l'Afrique de l'Ouest",
+        help="Ce nom apparaîtra sur tous les graphiques et tableaux"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.divider()
+    
     # Séparateur
     separator = st.selectbox(
         "Séparateur de colonnes",
@@ -117,7 +116,7 @@ with st.sidebar:
     # Options d'affichage
     st.subheader("📊 Affichage")
     show_log_scale = st.checkbox("Échelle logarithmique", value=True)
-    show_grid = st.checkbox("Afficher la grille", value=True)
+    show_grid = st.checkbox("Afficher les grilles", value=True)
     
     st.divider()
     
@@ -300,7 +299,7 @@ def generate_predictions(df, analysis, count, cutoff):
     return combined, None
 
 # Fonction pour créer un graphique Zipf avec Plotly
-def create_zipf_plot(df, analysis, show_log=True):
+def create_zipf_plot(df, analysis, province, show_log=True, show_grid=True):
     """Crée le graphique de Zipf"""
     ranks = df['rank'].values
     sizes = df['size'].values
@@ -333,27 +332,32 @@ def create_zipf_plot(df, analysis, show_log=True):
     ))
     
     fig.update_layout(
-        title=f'Loi de Zipf (α = {alpha:.4f}, R² = {analysis["r_squared"]:.4f})',
+        title=f'Loi de Zipf - {province}<br>(α = {alpha:.4f}, R² = {analysis["r_squared"]:.4f})',
         xaxis_title='Rang',
         yaxis_title='Taille (Oz)',
         hovermode='closest',
         template='plotly_white',
-        height=500
+        height=500,
+        showlegend=True
     )
     
     if show_log:
         fig.update_xaxes(type='log')
         fig.update_yaxes(type='log')
     
+    if show_grid:
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    
     return fig
 
-def create_distribution_plot(df):
+def create_distribution_plot(df, province, show_grid=True):
     """Crée l'histogramme de distribution"""
     fig = px.bar(
         df,
         x='name',
         y='size',
-        title='Distribution des Gisements par Taille',
+        title=f'Distribution des Gisements par Taille - {province}',
         labels={'size': 'Taille (M Oz)', 'name': 'Gisement'},
         color='size',
         color_continuous_scale='Viridis'
@@ -373,9 +377,13 @@ def create_distribution_plot(df):
     fig.update_yaxes(title='Taille (M Oz)')
     fig.data[0].y = df['size'] / 1e6
     
+    if show_grid:
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    
     return fig
 
-def create_combined_plot(combined_df, analysis, cutoff, show_log=True):
+def create_combined_plot(combined_df, analysis, cutoff, province, show_log=True, show_grid=True):
     """Crée le graphique combiné avec prédictions"""
     fig = go.Figure()
     
@@ -426,7 +434,7 @@ def create_combined_plot(combined_df, analysis, cutoff, show_log=True):
     ))
     
     fig.update_layout(
-        title='Distribution Reclassée - Échelle Log-Log',
+        title=f'Distribution Reclassée (Échelle Log-Log) - {province}',
         xaxis_title='Nouveau Rang',
         yaxis_title='Taille (Oz)',
         hovermode='closest',
@@ -438,53 +446,77 @@ def create_combined_plot(combined_df, analysis, cutoff, show_log=True):
         fig.update_xaxes(type='log')
         fig.update_yaxes(type='log')
     
+    if show_grid:
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    
     return fig
 
-def create_reranked_histogram(combined_df):
-    """Crée l'histogramme de la distribution reclassée"""
+def create_reranked_histogram(combined_df, province, show_grid=True):
+    """Crée l'histogramme de la distribution reclassée - CLASSÉ PAR RANG"""
+    # Trier par nouveau rang
+    sorted_df = combined_df.sort_values('new_rank').reset_index(drop=True)
+    
+    # Créer une colonne pour la couleur basée sur le type
+    colors = ['#48bb78' if t == 'existing' else '#ed8936' for t in sorted_df['type']]
+    
     fig = go.Figure()
     
-    # Créer deux barres séparées pour existants et prédits
-    existing = combined_df[combined_df['type'] == 'existing']
-    predicted = combined_df[combined_df['type'] == 'predicted']
-    
     fig.add_trace(go.Bar(
-        x=existing['name'],
-        y=existing['size'] / 1e6,
-        name='Gisements Existants',
-        marker_color='#48bb78',
-        hovertemplate='<b>%{x}</b><br>Taille: %{y:.2f} M Oz<extra></extra>'
-    ))
-    
-    fig.add_trace(go.Bar(
-        x=predicted['name'],
-        y=predicted['size'] / 1e6,
-        name='Gisements Prédits',
-        marker_color='#ed8936',
-        hovertemplate='<b>%{x}</b><br>Taille: %{y:.2f} M Oz<extra></extra>'
+        x=sorted_df['name'],
+        y=sorted_df['size'] / 1e6,
+        name='Gisements',
+        marker_color=colors,
+        hovertemplate='<b>%{x}</b><br>Rang: %{customdata}<br>Taille: %{y:.2f} M Oz<extra></extra>',
+        customdata=sorted_df['new_rank']
     ))
     
     fig.update_layout(
-        title='Distribution Reclassée - Histogramme',
-        xaxis_title='Gisement',
+        title=f'Distribution Reclassée - Histogramme Classé par Rang - {province}',
+        xaxis_title='Gisement (par ordre de rang)',
         yaxis_title='Taille (M Oz)',
         xaxis_tickangle=-45,
         height=500,
-        barmode='group',
-        template='plotly_white'
+        template='plotly_white',
+        showlegend=False
+    )
+    
+    if show_grid:
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    
+    # Ajouter une légende personnalisée
+    fig.add_annotation(
+        x=0.02, y=0.98,
+        xref='paper', yref='paper',
+        text='🟢 Existant  🟠 Prédit',
+        showarrow=False,
+        bgcolor='white',
+        bordercolor='gray',
+        borderwidth=1,
+        borderpad=5,
+        font=dict(size=12)
     )
     
     return fig
 
 # Fonctions d'export
-def df_to_excel(dataframes_dict):
+def df_to_excel(dataframes_dict, province):
     """Convertit plusieurs DataFrames en fichier Excel"""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for sheet_name, df in dataframes_dict.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            # Ajouter le nom de la province dans la première ligne
+            temp_df = pd.DataFrame([[f'Province: {province}']], columns=[''])
+            temp_df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+            df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=2)
     output.seek(0)
     return output
+
+def fig_to_image(fig, format='png'):
+    """Convertit une figure Plotly en image PNG/JPG"""
+    img_bytes = fig.to_image(format=format, width=1200, height=800, scale=2)
+    return img_bytes
 
 # Analyse des données
 if data_input:
@@ -496,6 +528,9 @@ if data_input:
         
         # Affichage des résultats
         st.header("📈 Résultats de l'Analyse")
+        
+        # Afficher le nom de la province
+        st.info(f"**Province Aurifère:** {province_name}")
         
         # Onglets
         tab1, tab2, tab3, tab4 = st.tabs(["📊 Statistiques", "📉 Graphiques", "🔮 Prédictions", "📋 Tableau"])
@@ -563,32 +598,69 @@ if data_input:
             st.subheader("Graphiques d'Analyse")
             
             # Graphique de Zipf
-            zipf_fig = create_zipf_plot(df, analysis, show_log_scale)
+            zipf_fig = create_zipf_plot(df, analysis, province_name, show_log_scale, show_grid)
             st.plotly_chart(zipf_fig, use_container_width=True)
             
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 zipf_html = zipf_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Zipf (HTML)",
+                    label="📥 HTML",
                     data=zipf_html,
-                    file_name="graphique_zipf.html",
+                    file_name=f"zipf_{province_name.replace(' ', '_')}.html",
                     mime="text/html"
+                )
+            
+            with col2:
+                zipf_png = fig_to_image(zipf_fig, 'png')
+                st.download_button(
+                    label="📥 PNG",
+                    data=zipf_png,
+                    file_name=f"zipf_{province_name.replace(' ', '_')}.png",
+                    mime="image/png"
+                )
+            
+            with col3:
+                zipf_jpg = fig_to_image(zipf_fig, 'jpg')
+                st.download_button(
+                    label="📥 JPG",
+                    data=zipf_jpg,
+                    file_name=f"zipf_{province_name.replace(' ', '_')}.jpg",
+                    mime="image/jpeg"
                 )
             
             st.divider()
             
             # Graphique de distribution
-            dist_fig = create_distribution_plot(df)
+            dist_fig = create_distribution_plot(df, province_name, show_grid)
             st.plotly_chart(dist_fig, use_container_width=True)
             
-            with col2:
+            col1, col2, col3 = st.columns(3)
+            with col1:
                 dist_html = dist_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Distribution (HTML)",
+                    label="📥 HTML",
                     data=dist_html,
-                    file_name="distribution_gisements.html",
+                    file_name=f"distribution_{province_name.replace(' ', '_')}.html",
                     mime="text/html"
+                )
+            
+            with col2:
+                dist_png = fig_to_image(dist_fig, 'png')
+                st.download_button(
+                    label="📥 PNG",
+                    data=dist_png,
+                    file_name=f"distribution_{province_name.replace(' ', '_')}.png",
+                    mime="image/png"
+                )
+            
+            with col3:
+                dist_jpg = fig_to_image(dist_fig, 'jpg')
+                st.download_button(
+                    label="📥 JPG",
+                    data=dist_jpg,
+                    file_name=f"distribution_{province_name.replace(' ', '_')}.jpg",
+                    mime="image/jpeg"
                 )
         
         with tab3:
@@ -643,28 +715,69 @@ if data_input:
                 st.subheader("📉 Visualisations de la Distribution Reclassée")
                 
                 # Graphique log-log
-                combined_fig = create_combined_plot(combined_df, analysis, cutoff_value, show_log_scale)
+                combined_fig = create_combined_plot(combined_df, analysis, cutoff_value, province_name, show_log_scale, show_grid)
                 st.plotly_chart(combined_fig, use_container_width=True)
                 
-                combined_html = combined_fig.to_html(include_plotlyjs='cdn')
-                st.download_button(
-                    label="📥 Télécharger Distribution Reclassée Log-Log (HTML)",
-                    data=combined_html,
-                    file_name="distribution_reclassee_loglog.html",
-                    mime="text/html"
-                )
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    combined_html = combined_fig.to_html(include_plotlyjs='cdn')
+                    st.download_button(
+                        label="📥 HTML",
+                        data=combined_html,
+                        file_name=f"reclassee_loglog_{province_name.replace(' ', '_')}.html",
+                        mime="text/html"
+                    )
                 
-                # Histogramme
-                hist_fig = create_reranked_histogram(combined_df)
+                with col2:
+                    combined_png = fig_to_image(combined_fig, 'png')
+                    st.download_button(
+                        label="📥 PNG",
+                        data=combined_png,
+                        file_name=f"reclassee_loglog_{province_name.replace(' ', '_')}.png",
+                        mime="image/png"
+                    )
+                
+                with col3:
+                    combined_jpg = fig_to_image(combined_fig, 'jpg')
+                    st.download_button(
+                        label="📥 JPG",
+                        data=combined_jpg,
+                        file_name=f"reclassee_loglog_{province_name.replace(' ', '_')}.jpg",
+                        mime="image/jpeg"
+                    )
+                
+                # Histogramme CLASSÉ
+                st.divider()
+                hist_fig = create_reranked_histogram(combined_df, province_name, show_grid)
                 st.plotly_chart(hist_fig, use_container_width=True)
                 
-                hist_html = hist_fig.to_html(include_plotlyjs='cdn')
-                st.download_button(
-                    label="📥 Télécharger Distribution Reclassée Histogramme (HTML)",
-                    data=hist_html,
-                    file_name="distribution_reclassee_histogramme.html",
-                    mime="text/html"
-                )
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    hist_html = hist_fig.to_html(include_plotlyjs='cdn')
+                    st.download_button(
+                        label="📥 HTML",
+                        data=hist_html,
+                        file_name=f"reclassee_histogramme_{province_name.replace(' ', '_')}.html",
+                        mime="text/html"
+                    )
+                
+                with col2:
+                    hist_png = fig_to_image(hist_fig, 'png')
+                    st.download_button(
+                        label="📥 PNG",
+                        data=hist_png,
+                        file_name=f"reclassee_histogramme_{province_name.replace(' ', '_')}.png",
+                        mime="image/png"
+                    )
+                
+                with col3:
+                    hist_jpg = fig_to_image(hist_fig, 'jpg')
+                    st.download_button(
+                        label="📥 JPG",
+                        data=hist_jpg,
+                        file_name=f"reclassee_histogramme_{province_name.replace(' ', '_')}.jpg",
+                        mime="image/jpeg"
+                    )
                 
                 # Tableau reclassé
                 st.divider()
@@ -672,6 +785,7 @@ if data_input:
                 
                 # Préparer le tableau d'affichage
                 display_df = combined_df.copy()
+                display_df['Province'] = province_name
                 display_df['Nouveau Rang'] = display_df['new_rank']
                 display_df['Type'] = display_df['type'].map({'existing': '🟢 Existant', 'predicted': '🟠 Prédit'})
                 display_df['Nom'] = display_df['name']
@@ -694,7 +808,7 @@ if data_input:
                 display_df['Changement'] = display_df.apply(calc_change, axis=1)
                 
                 st.dataframe(
-                    display_df[['Nouveau Rang', 'Type', 'Nom', 'Taille (M Oz)', 'Rang Original', 'Changement']],
+                    display_df[['Province', 'Nouveau Rang', 'Type', 'Nom', 'Taille (M Oz)', 'Rang Original', 'Changement']],
                     use_container_width=True,
                     height=400
                 )
@@ -703,23 +817,23 @@ if data_input:
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    csv = combined_df.to_csv(index=False)
+                    csv = display_df[['Province', 'Nouveau Rang', 'Type', 'Nom', 'Taille (M Oz)', 'Rang Original', 'Changement']].to_csv(index=False)
                     st.download_button(
                         label="📥 Télécharger CSV",
                         data=csv,
-                        file_name="distribution_reclassee.csv",
+                        file_name=f"distribution_reclassee_{province_name.replace(' ', '_')}.csv",
                         mime="text/csv"
                     )
                 
                 with col2:
                     excel_data = df_to_excel({
-                        'Distribution Reclassée': display_df[['Nouveau Rang', 'Type', 'Nom', 'Taille (M Oz)', 'Rang Original', 'Changement']],
+                        'Distribution Reclassée': display_df[['Province', 'Nouveau Rang', 'Type', 'Nom', 'Taille (M Oz)', 'Rang Original', 'Changement']],
                         'Données Brutes': combined_df
-                    })
+                    }, province_name)
                     st.download_button(
                         label="📥 Télécharger Excel",
                         data=excel_data,
-                        file_name="distribution_reclassee.xlsx",
+                        file_name=f"distribution_reclassee_{province_name.replace(' ', '_')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
         
@@ -728,13 +842,14 @@ if data_input:
             
             # Préparer le tableau
             display_df = df.copy()
+            display_df['Province'] = province_name
             display_df['Rang'] = display_df['rank']
             display_df['Nom'] = display_df['name']
             display_df['Taille (Oz)'] = display_df['size'].apply(lambda x: f"{x:,.0f}")
             display_df['Taille (M Oz)'] = (display_df['size'] / 1e6).round(2)
             
             st.dataframe(
-                display_df[['Rang', 'Nom', 'Taille (Oz)', 'Taille (M Oz)']],
+                display_df[['Province', 'Rang', 'Nom', 'Taille (Oz)', 'Taille (M Oz)']],
                 use_container_width=True,
                 height=500
             )
@@ -743,22 +858,22 @@ if data_input:
             col1, col2 = st.columns(2)
             
             with col1:
-                csv = df.to_csv(index=False)
+                csv = display_df[['Province', 'Rang', 'Nom', 'Taille (Oz)', 'Taille (M Oz)']].to_csv(index=False)
                 st.download_button(
                     label="📥 Télécharger CSV",
                     data=csv,
-                    file_name="donnees_gisements.csv",
+                    file_name=f"donnees_gisements_{province_name.replace(' ', '_')}.csv",
                     mime="text/csv"
                 )
             
             with col2:
                 excel_data = df_to_excel({
-                    'Données': display_df[['Rang', 'Nom', 'Taille (Oz)', 'Taille (M Oz)']]
-                })
+                    'Données': display_df[['Province', 'Rang', 'Nom', 'Taille (Oz)', 'Taille (M Oz)']]
+                }, province_name)
                 st.download_button(
                     label="📥 Télécharger Excel",
                     data=excel_data,
-                    file_name="donnees_gisements.xlsx",
+                    file_name=f"donnees_gisements_{province_name.replace(' ', '_')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
     else:
@@ -771,6 +886,6 @@ st.divider()
 st.markdown("""
     <div style='text-align: center; color: #666; padding: 20px;'>
         <p><strong>Analyse Loi de Zipf - Gisements d'Or</strong></p>
-        <p>Développé avec ❤️ par Didier Ouedraogo & Koulou Danshoko</p>
+        <p>Développé par Didier Ouedraogo & Koulou Danshoko</p>
     </div>
 """, unsafe_allow_html=True)
