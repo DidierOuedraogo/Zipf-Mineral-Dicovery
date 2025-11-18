@@ -500,10 +500,9 @@ def create_reranked_histogram(combined_df, province, show_grid=True):
     
     return fig
 
-# Fonctions d'export SANS kaleido (utilisation de matplotlib à la place)
+# Fonctions d'export avec matplotlib
 def plotly_to_png_matplotlib(fig, province, filename_base):
     """Convertit une figure Plotly en PNG via matplotlib"""
-    # Créer une figure matplotlib
     plt.figure(figsize=(12, 8), dpi=150)
     
     # Extraire les données de la figure plotly
@@ -511,11 +510,24 @@ def plotly_to_png_matplotlib(fig, province, filename_base):
         if trace.type == 'scatter':
             if trace.mode == 'markers':
                 plt.scatter(trace.x, trace.y, label=trace.name, s=100, alpha=0.7)
-            elif trace.mode == 'lines' or 'lines' in trace.mode:
-                plt.plot(trace.x, trace.y, label=trace.name, linewidth=2, linestyle='--' if 'dash' in str(trace.line.dash) else '-')
+            elif trace.mode == 'lines' or 'lines' in str(trace.mode):
+                linestyle = '--' if 'dash' in str(trace.line.dash) else '-'
+                plt.plot(trace.x, trace.y, label=trace.name, linewidth=2, linestyle=linestyle)
         elif trace.type == 'bar':
-            plt.bar(range(len(trace.y)), trace.y, color=trace.marker.color if hasattr(trace.marker, 'color') else 'blue')
-            plt.xticks(range(len(trace.x)), trace.x, rotation=45, ha='right')
+            # Gérer les couleurs de manière sûre
+            if hasattr(trace, 'marker') and hasattr(trace.marker, 'color'):
+                colors = trace.marker.color
+                # Si c'est une liste de couleurs
+                if isinstance(colors, (list, tuple, np.ndarray)):
+                    plt.bar(range(len(trace.y)), trace.y, color=colors)
+                else:
+                    # Si c'est une couleur unique ou None
+                    plt.bar(range(len(trace.y)), trace.y, color=colors if colors else 'steelblue')
+            else:
+                plt.bar(range(len(trace.y)), trace.y, color='steelblue')
+            
+            if hasattr(trace, 'x') and trace.x is not None:
+                plt.xticks(range(len(trace.x)), trace.x, rotation=45, ha='right')
     
     # Récupérer le titre et les labels
     title = fig.layout.title.text if fig.layout.title else f'{filename_base} - {province}'
@@ -527,9 +539,9 @@ def plotly_to_png_matplotlib(fig, province, filename_base):
     plt.ylabel(yaxis_title, fontsize=12)
     
     # Échelle log si nécessaire
-    if fig.layout.xaxis.type == 'log':
+    if hasattr(fig.layout.xaxis, 'type') and fig.layout.xaxis.type == 'log':
         plt.xscale('log')
-    if fig.layout.yaxis.type == 'log':
+    if hasattr(fig.layout.yaxis, 'type') and fig.layout.yaxis.type == 'log':
         plt.yscale('log')
     
     plt.grid(True, alpha=0.3)
