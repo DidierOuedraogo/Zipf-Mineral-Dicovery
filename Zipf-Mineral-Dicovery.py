@@ -477,11 +477,6 @@ def create_reranked_histogram(combined_df):
     return fig
 
 # Fonctions d'export
-def fig_to_png(fig):
-    """Convertit une figure Plotly en PNG"""
-    img_bytes = fig.to_image(format="png", width=1200, height=800)
-    return img_bytes
-
 def df_to_excel(dataframes_dict):
     """Convertit plusieurs DataFrames en fichier Excel"""
     output = BytesIO()
@@ -568,36 +563,32 @@ if data_input:
             st.subheader("Graphiques d'Analyse")
             
             # Graphique de Zipf
-            st.plotly_chart(
-                create_zipf_plot(df, analysis, show_log_scale),
-                use_container_width=True
-            )
+            zipf_fig = create_zipf_plot(df, analysis, show_log_scale)
+            st.plotly_chart(zipf_fig, use_container_width=True)
             
             col1, col2 = st.columns(2)
             with col1:
-                zipf_png = fig_to_png(create_zipf_plot(df, analysis, show_log_scale))
+                zipf_html = zipf_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Zipf (PNG)",
-                    data=zipf_png,
-                    file_name="graphique_zipf.png",
-                    mime="image/png"
+                    label="📥 Télécharger Zipf (HTML)",
+                    data=zipf_html,
+                    file_name="graphique_zipf.html",
+                    mime="text/html"
                 )
             
             st.divider()
             
             # Graphique de distribution
-            st.plotly_chart(
-                create_distribution_plot(df),
-                use_container_width=True
-            )
+            dist_fig = create_distribution_plot(df)
+            st.plotly_chart(dist_fig, use_container_width=True)
             
             with col2:
-                dist_png = fig_to_png(create_distribution_plot(df))
+                dist_html = dist_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Distribution (PNG)",
-                    data=dist_png,
-                    file_name="distribution_gisements.png",
-                    mime="image/png"
+                    label="📥 Télécharger Distribution (HTML)",
+                    data=dist_html,
+                    file_name="distribution_gisements.html",
+                    mime="text/html"
                 )
         
         with tab3:
@@ -652,31 +643,27 @@ if data_input:
                 st.subheader("📉 Visualisations de la Distribution Reclassée")
                 
                 # Graphique log-log
-                st.plotly_chart(
-                    create_combined_plot(combined_df, analysis, cutoff_value, show_log_scale),
-                    use_container_width=True
-                )
+                combined_fig = create_combined_plot(combined_df, analysis, cutoff_value, show_log_scale)
+                st.plotly_chart(combined_fig, use_container_width=True)
                 
-                combined_png = fig_to_png(create_combined_plot(combined_df, analysis, cutoff_value, show_log_scale))
+                combined_html = combined_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Distribution Reclassée Log-Log (PNG)",
-                    data=combined_png,
-                    file_name="distribution_reclassee_loglog.png",
-                    mime="image/png"
+                    label="📥 Télécharger Distribution Reclassée Log-Log (HTML)",
+                    data=combined_html,
+                    file_name="distribution_reclassee_loglog.html",
+                    mime="text/html"
                 )
                 
                 # Histogramme
-                st.plotly_chart(
-                    create_reranked_histogram(combined_df),
-                    use_container_width=True
-                )
+                hist_fig = create_reranked_histogram(combined_df)
+                st.plotly_chart(hist_fig, use_container_width=True)
                 
-                hist_png = fig_to_png(create_reranked_histogram(combined_df))
+                hist_html = hist_fig.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Télécharger Distribution Reclassée Histogramme (PNG)",
-                    data=hist_png,
-                    file_name="distribution_reclassee_histogramme.png",
-                    mime="image/png"
+                    label="📥 Télécharger Distribution Reclassée Histogramme (HTML)",
+                    data=hist_html,
+                    file_name="distribution_reclassee_histogramme.html",
+                    mime="text/html"
                 )
                 
                 # Tableau reclassé
